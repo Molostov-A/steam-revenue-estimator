@@ -3,3 +3,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 *.log
+
+# Локальные инструкции по деплою (содержат инфраструктурные детали)
+DEPLOY.md
