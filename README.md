@@ -1,5 +1,7 @@
 # Steam Revenue Estimator
 
+**[Открыть приложение](https://molostov-a.github.io/steam-revenue-estimator/)**
+
 Веб-приложение для оценки выручки и дохода разработчика игры по количеству отзывов в Steam. Использует модель, близкую к VG Insights / Gamalytic (метод Boxleiter / review-to-sales ratio).
 
 ## Возможности
