@@ -324,6 +324,7 @@ async function fetchSteamViaProxy(appid) {
     price: po ? { currency: po.currency, initial: po.initial, final: po.final, discountPercent: po.discount_percent || 0 } : null,
     releaseDate: d.release_date ? d.release_date.date : null,
     comingSoon: !!(d.release_date && d.release_date.coming_soon),
+    headerImage: d.header_image || null,
     genres: (d.genres || []).map(g => g.description),
     reviews: qs ? { total: qs.total_reviews, positive: qs.total_positive, negative: qs.total_negative, score: qs.review_score, scoreDesc: qs.review_score_desc } : null,
   };
@@ -375,7 +376,7 @@ async function fetchApp() {
     tags.push('сейчас −' + data.price.discountPercent + '%, расчёт по базовой цене');
   }
   if (usingProxy) tags.push('загружено через CORS-прокси');
-  meta.innerHTML = '<strong>' + (data.name || 'Игра') + '</strong> <span class="tags">(' + tags.join(' · ') + ')</span>';
+  meta.innerHTML = (data.headerImage ? '<img src="' + data.headerImage + '" class="game-img" alt="" />' : '') + '<strong>' + (data.name || 'Игра') + '</strong> <span class="tags">(' + tags.join(' · ') + ')</span>';
 
   if (data.reviews) $('reviews').value = data.reviews.total;
   if (data.price && !data.isFree) $('price').value = (data.price.initial / 100).toFixed(2);
@@ -425,7 +426,7 @@ function onClear() {
   $('publisher').value = 0;
   $('tax').value = 0;
   $('refund').value = 5;
-  $('taxMode').value = 'none';
+  $('taxMode').value = 'ru_ip6';
   $('withdrawalFee').value = 0;
   $('usWithholding').value = 0;
   $('tieredCut').checked = true;

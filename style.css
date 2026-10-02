@@ -143,6 +143,16 @@ label input:disabled {
 
 .hidden { display: none; }
 
+.game-img {
+  display: block;
+  max-width: 460px;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+
 .results { margin-top: 20px; }
 .results h2 { font-size: 20px; margin: 0 0 14px; }
 

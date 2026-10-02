@@ -98,6 +98,7 @@ async function handleApp(req, res, query) {
       } : null,
       releaseDate: details.release_date ? details.release_date.date : null,
       comingSoon: !!(details.release_date && details.release_date.coming_soon),
+      headerImage: details.header_image || null,
       genres: (details.genres || []).map(g => g.description),
       reviews: reviews ? {
         total: reviews.total_reviews,
