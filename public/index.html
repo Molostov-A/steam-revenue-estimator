@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steam Revenue Estimator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Steam Revenue Estimator</h1>
+    <p class="subtitle">Оценка выручки и дохода разработчика по количеству отзывов (метод Boxleiter / review-to-sales ratio)</p>
+  </header>
+
+  <main>
+    <div class="tabs" role="tablist">
+      <button class="tab active" id="tab-link" role="tab" aria-selected="true">1. По ссылке Steam</button>
+      <button class="tab" id="tab-manual" role="tab" aria-selected="false">2. Вручную (офлайн)</button>
+    </div>
+
+    <!-- MODE 1: URL -->
+    <section id="panel-link" class="panel active">
+      <div class="field-row">
+        <input id="url-input" type="text" placeholder="https://store.steampowered.com/app/413150/..." />
+        <button id="fetch-btn" class="btn primary">Загрузить данные</button>
+      </div>
+      <div id="url-status" class="status"></div>
+      <div id="fetched-meta" class="meta hidden"></div>
+    </section>
+
+    <!-- MODE 2 / shared form -->
+    <section id="panel-manual" class="panel">
+      <div class="hint">Заполните только то, что знаете. Пустые поля заполняются значениями по умолчанию (помечены).</div>
+
+      <fieldset>
+        <legend>Базовые данные</legend>
+        <div class="grid">
+          <label>Количество отзывов (всего)
+            <input id="reviews" type="number" min="0" step="1" placeholder="напр. 10 000" />
+          </label>
+          <label>Текущая цена (USD)
+            <input id="price" type="number" min="0" step="0.01" placeholder="напр. 19.99" />
+          </label>
+          <label>Год релиза
+            <input id="year" type="number" min="1990" max="2030" step="1" placeholder="напр. 2022" />
+          </label>
+          <label>Средняя цена продажи с учётом скидок (USD)
+            <input id="asp" type="number" min="0" step="0.01" placeholder="необязательно" />
+          </label>
+        </div>
+        <div class="grid alt">
+          <label>…или число владельцев напрямую
+            <input id="owners" type="number" min="0" step="1" placeholder="пропускает расчёт от отзывов" />
+          </label>
+          <label>…или валовая выручка напрямую (USD)
+            <input id="gross" type="number" min="0" step="1" placeholder="пропускает расчёт выше" />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Коэффициент «продажи на 1 отзыв» (review ratio)</legend>
+        <div class="grid three">
+          <label>Мин.
+            <input id="ratioMin" type="number" min="1" step="0.5" class="ratio-in" />
+          </label>
+          <label>Наиболее вероятный
+            <input id="ratioMode" type="number" min="1" step="0.5" class="ratio-in" />
+          </label>
+          <label>Макс.
+            <input id="ratioMax" type="number" min="1" step="0.5" class="ratio-in" />
+          </label>
+        </div>
+        <button id="ratio-suggest" class="btn small">Подобрать по году и цене</button>
+        <div class="hint">Диапазон зависит от года релиза, цены, жанра, скидок и пр. По умолчанию: 20–30–55 (без года), новее — ниже.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Коэффициент скидок (доля от цены, которую реально платят)</legend>
+        <div class="grid three">
+          <label>Мин. (мало скидок)
+            <input id="discountMin" type="number" min="0.01" max="1" step="0.01" value="0.4" />
+          </label>
+          <label>Наиболее вероятный
+            <input id="discountMode" type="number" min="0.01" max="1" step="0.01" value="0.6" />
+          </label>
+          <label>Макс. (много продаж по полной)
+            <input id="discountMax" type="number" min="0.01" max="1" step="0.01" value="0.9" />
+          </label>
+        </div>
+        <div class="hint">Если задана «Средняя цена продажи» (ASP), этот коэффициент вычисляется автоматически и игнорируется.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Вычеты</legend>
+        <label>Налоговый режим
+          <select id="taxMode">
+            <option value="none" selected>Без налогов (по умолчанию)</option>
+            <option value="ru_ndfl">Россия — физлицо (НДФЛ 13%)</option>
+            <option value="ru_npd">Россия — самозанятый (НПД 6%)</option>
+            <option value="ru_ip6">Россия — ИП (УСН «Доходы» 6%)</option>
+            <option value="ru_ip15">Россия — ИП (УСН «Доходы−расходы» 15%)</option>
+            <option value="custom">Свой вариант</option>
+          </select>
+        </label>
+        <div class="hint">Для ИП дополнительно есть фиксированные страховые взносы (≈ 53 658 ₽/год + 1% свыше 300 тыс. ₽) — они не учтены, т.к. это фикс, а не %. НДФЛ прогрессивный: 15% с суммы свыше 5 млн ₽/год.</div>
+        <div class="grid">
+          <label>Комиссия Steam (%)
+            <input id="steamCut" type="number" min="0" max="100" step="1" value="30" />
+          </label>
+          <label>Налог США, withholding (%)
+            <input id="usWithholding" type="number" min="0" max="100" step="1" value="0" />
+          </label>
+          <label>Доля издателя (%)
+            <input id="publisher" type="number" min="0" max="100" step="1" value="0" />
+          </label>
+          <label>Налог (%)
+            <input id="tax" type="number" min="0" max="100" step="1" value="0" />
+          </label>
+          <label>Вывод/конвертация (%)
+            <input id="withdrawalFee" type="number" min="0" max="100" step="0.1" value="0" />
+          </label>
+          <label>Возвраты (%)
+            <input id="refund" type="number" min="0" max="100" step="1" value="5" />
+          </label>
+        </div>
+        <div class="hint">США удерживают 30% с роялти иностранцам (с суммы после комиссии Steam). По договору США–РФ раньше было 0%, но с 2023 договор приостановлен → 30%. Удерживается у источника и без действующего договора не засчитывается против налога РФ.</div>
+        <label class="checkbox">
+          <input id="tieredCut" type="checkbox" checked />
+          Учитывать пониженную комиссию Steam (25% после $10M, 20% после $50M)
+        </label>
+      </fieldset>
+
+      <div class="actions">
+        <button id="calc-btn" class="btn primary">Рассчитать</button>
+        <button id="clear-btn" class="btn">Очистить</button>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="results hidden">
+      <h2>Результаты</h2>
+
+      <div class="cards">
+        <div class="card low">
+          <div class="card-label">Пессимистично</div>
+          <div class="card-value" id="res-low">—</div>
+          <div class="card-sub" id="res-low-owners">—</div>
+        </div>
+        <div class="card mid">
+          <div class="card-label">Наиболее вероятно</div>
+          <div class="card-value" id="res-mid">—</div>
+          <div class="card-sub" id="res-mid-owners">—</div>
+        </div>
+        <div class="card high">
+          <div class="card-label">Оптимистично</div>
+          <div class="card-value" id="res-high">—</div>
+          <div class="card-sub" id="res-high-owners">—</div>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        Это оценка на основе публичных эвристик (Boxleiter method / VG Insights / Gamalytic). Погрешность обычно ±50–100%.
+        Точную выручку знает только разработчик/издатель.
+      </div>
+
+      <details class="formula" open>
+        <summary>Формула расчёта</summary>
+        <pre id="formula-text"></pre>
+      </details>
+
+      <details class="steps">
+        <summary>Пошаговый расчёт (наиболее вероятный сценарий)</summary>
+        <pre id="steps-text"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <p>Модель оценочная. Не является финансовым советом.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
