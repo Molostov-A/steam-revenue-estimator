@@ -81,42 +81,38 @@ node server.js
 
 Порт можно изменить через переменную окружения `PORT`.
 
-## Развёртывание (GitHub Pages + Render)
+## Развёртывание (GitHub Pages)
 
-Приложение состоит из двух частей:
-1. **Статический frontend** (HTML/CSS/JS) — режим 2 (вручную) работает полностью автономно.
-2. **Node-сервер** — нужен для режима 1 (загрузка данных Steam по ссылке), т.к. Steam API не разрешает CORS-запросы из браузера.
+Бэкенд не обязателен — приложение работает в двух режимах:
+- **Режим «По ссылке»**: загружает данные Steam через публичный CORS-прокси (`corsproxy.io`), либо через ваш собственный сервер, если он указан.
+- **Режим «Вручную»**: полностью офлайн, работает без интернета и без сервера.
 
-Для полноценной работы с режимом 1 нужно развернуть сервер.
-
-### 1. Сервер на Render (бесплатный тир)
-
-1. Создайте аккаунт на [render.com](https://render.com) и подключите GitHub-репозиторий.
-2. Нажмите **New + → Web Service**, выберите репозиторий.
-3. Настройки:
-   - **Build Command**: `npm install` (оставьте по умолчанию)
-   - **Start Command**: `npm start`
-   - Render сам определит Node.js по наличию `package.json`.
-4. Нажмите **Create Web Service** — Render присвоит URL вида `https://steam-revenue-estimator.onrender.com`.
-5. Запомните этот URL.
-
-### 2. GitHub Pages для frontend'а
+### GitHub Pages
 
 1. Запушьте репозиторий на GitHub.
 2. В настройках репозитория: **Settings → Pages**, выберите:
    - **Source**: Deploy from a branch
    - **Branch**: `master`, **folder**: `/ (root)`
    - Нажмите **Save**.
-3. После деплоя GitHub даст URL вида `https://<user>.github.io/steam-revenue-estimator/`.
-4. В файле `index.html` замените пустую строку на URL вашего Render-сервера:
+3. После деплоя: `https://<user>.github.io/steam-revenue-estimator/`
+
+Всё готово — оба режима работают. Если вы подняли свой Node-сервер и хотите использовать его вместо CORS-прокси, замените в `index.html`:
 
 ```html
-<script>window.STEAM_ESTIMATOR_API = 'https://steam-revenue-estimator.onrender.com';</script>
+<script>window.STEAM_ESTIMATOR_API = 'https://ваш-сервер.com';</script>
 ```
 
-5. Запушьте изменение.
+Без этой настройки режим «По ссылке» автоматически использует `corsproxy.io` как фолбэк.
 
-### 3. Что нажимать на Render
+### Свой сервер (опционально)
+
+Если нужен свой сервер вместо публичного прокси:
+
+```bash
+node server.js   # http://localhost:3001
+```
+
+Для хостинга подойдёт любой сервис с поддержкой Node.js (VPS, Railway, Fly.io и т.д.). На сервере должен быть настроен `PORT` через переменную окружения.
 
 ## API
 

@@ -285,49 +285,108 @@ function buildSteps(inp, discount, mid, showOwners, showGross, showNet) {
 }
 
 // ---------- URL mode ----------
+function extractAppId(input) {
+  if (!input) return null;
+  const s = String(input).trim();
+  if (/^\d+$/.test(s)) return s;
+  try {
+    const u = new URL(s);
+    const m = u.pathname.match(/\/(?:app|agecheck\/app)\/(\d+)/i);
+    if (m) return m[1];
+  } catch (e) {
+    const m = s.match(/app\/(\d+)/i);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function fetchSteamViaProxy(appid) {
+  const proxy = 'https://corsproxy.io/?';
+  const [dr, rr] = await Promise.all([
+    fetch(proxy + encodeURIComponent('https://store.steampowered.com/api/appdetails?appids=' + appid + '&cc=us&l=english&filters=basic,price_overview,release_date,genres'), { signal: AbortSignal.timeout(30000) }),
+    fetch(proxy + encodeURIComponent('https://store.steampowered.com/appreviews/' + appid + '?json=1&filter=all&language=all&num_per_page=0&purchase_type=all'), { signal: AbortSignal.timeout(30000) }),
+  ]);
+  const details = await dr.json();
+  const reviews = await rr.json();
+  const entry = details && details[appid];
+  if (!entry || !entry.success) {
+    return { ok: false, error: 'Игра с таким App ID не найдена в Steam.' };
+  }
+  const d = entry.data;
+  const po = d.price_overview || null;
+  const qs = reviews && reviews.query_summary ? reviews.query_summary : null;
+  return {
+    ok: true,
+    appid,
+    name: d.name || null,
+    type: d.type || null,
+    isFree: !!d.is_free,
+    price: po ? { currency: po.currency, initial: po.initial, final: po.final, discountPercent: po.discount_percent || 0 } : null,
+    releaseDate: d.release_date ? d.release_date.date : null,
+    comingSoon: !!(d.release_date && d.release_date.coming_soon),
+    genres: (d.genres || []).map(g => g.description),
+    reviews: qs ? { total: qs.total_reviews, positive: qs.total_positive, negative: qs.total_negative, score: qs.review_score, scoreDesc: qs.review_score_desc } : null,
+  };
+}
+
 async function fetchApp() {
   const url = $('url-input').value.trim();
   const status = $('url-status');
   status.className = 'status';
   if (!url) { status.className = 'status error'; status.textContent = 'Введите ссылку или App ID.'; return; }
 
+  const appid = extractAppId(url);
+  if (!appid) { status.className = 'status error'; status.textContent = 'Не удалось определить App ID из ссылки.'; return; }
+
   status.textContent = 'Загружаю данные Steam…';
-  try {
-    const res = await fetch(API_BASE + '/api/app?url=' + encodeURIComponent(url));
-    const data = await res.json();
-    if (!data.ok) { status.className = 'status error'; status.textContent = data.error; return; }
+  let data = null;
+  let usingProxy = false;
 
-    status.className = 'status ok';
-    status.textContent = 'Данные загружены: ' + data.name;
-
-    // meta
-    const meta = $('fetched-meta');
-    meta.classList.remove('hidden');
-    const tags = [];
-    if (data.type) tags.push(data.type);
-    if (data.releaseDate) tags.push('релиз: ' + data.releaseDate);
-    if (data.genres && data.genres.length) tags.push(data.genres.join(', '));
-    if (data.isFree) tags.push('Free to Play');
-    if (data.price && !data.isFree && data.price.discountPercent > 0) {
-      tags.push('сейчас −' + data.price.discountPercent + '%, расчёт по базовой цене');
-    }
-    meta.innerHTML = '<strong>' + (data.name || 'Игра') + '</strong> <span class="tags">(' + tags.join(' · ') + ')</span>';
-
-    // fill fields
-    if (data.reviews) $('reviews').value = data.reviews.total;
-    if (data.price && !data.isFree) $('price').value = (data.price.initial / 100).toFixed(2);
-    else if (data.isFree) $('price').value = '';
-    if (data.releaseDate) {
-      const m = data.releaseDate.match(/(\d{4})/);
-      if (m) $('year').value = m[1];
-    }
-    applyRatioSuggestion();
-    onCalculate();
-    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (e) {
-    status.className = 'status error';
-    status.textContent = 'Ошибка: ' + e.message;
+  if (API_BASE) {
+    try {
+      const res = await fetch(API_BASE + '/api/app?appid=' + appid, { signal: AbortSignal.timeout(20000) });
+      data = await res.json();
+    } catch (e) { /* fallback below */ }
   }
+
+  if (!data) {
+    try {
+      status.textContent = 'Загружаю через прокси…';
+      data = await fetchSteamViaProxy(appid);
+      usingProxy = true;
+    } catch (e) {
+      data = { ok: false, error: 'Не удалось загрузить данные. Проверьте App ID или интернет.' };
+    }
+  }
+
+  if (!data.ok) { status.className = 'status error'; status.textContent = data.error; if (usingProxy) status.textContent += ' (через CORS-прокси)'; return; }
+
+  status.className = 'status ok';
+  status.textContent = 'Данные загружены: ' + data.name + (usingProxy ? ' (через CORS-прокси)' : '');
+
+  const meta = $('fetched-meta');
+  meta.classList.remove('hidden');
+  const tags = [];
+  if (data.type) tags.push(data.type);
+  if (data.releaseDate) tags.push('релиз: ' + data.releaseDate);
+  if (data.genres && data.genres.length) tags.push(data.genres.join(', '));
+  if (data.isFree) tags.push('Free to Play');
+  if (data.price && !data.isFree && data.price.discountPercent > 0) {
+    tags.push('сейчас −' + data.price.discountPercent + '%, расчёт по базовой цене');
+  }
+  if (usingProxy) tags.push('загружено через CORS-прокси');
+  meta.innerHTML = '<strong>' + (data.name || 'Игра') + '</strong> <span class="tags">(' + tags.join(' · ') + ')</span>';
+
+  if (data.reviews) $('reviews').value = data.reviews.total;
+  if (data.price && !data.isFree) $('price').value = (data.price.initial / 100).toFixed(2);
+  else if (data.isFree) $('price').value = '';
+  if (data.releaseDate) {
+    const m = data.releaseDate.match(/(\d{4})/);
+    if (m) $('year').value = m[1];
+  }
+  applyRatioSuggestion();
+  onCalculate();
+  $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function applyRatioSuggestion() {
