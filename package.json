@@ -1,0 +1,12 @@
+{
+  "name": "steam-revenue-estimator",
+  "version": "1.0.0",
+  "description": "Estimate Steam game developer revenue from review count (Boxleiter method)",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

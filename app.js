@@ -1,5 +1,7 @@
 'use strict';
 
+const API_BASE = window.STEAM_ESTIMATOR_API || '';
+
 // ---------- helpers ----------
 const $ = (id) => document.getElementById(id);
 
@@ -291,7 +293,7 @@ async function fetchApp() {
 
   status.textContent = 'Загружаю данные Steam…';
   try {
-    const res = await fetch('/api/app?url=' + encodeURIComponent(url));
+    const res = await fetch(API_BASE + '/api/app?url=' + encodeURIComponent(url));
     const data = await res.json();
     if (!data.ok) { status.className = 'status error'; status.textContent = data.error; return; }
 

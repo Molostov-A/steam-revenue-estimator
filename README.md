@@ -61,10 +61,12 @@
 ```
 steam-revenue-estimator/
 ├── server.js          # HTTP-сервер + прокси к Steam API
-└── public/
-    ├── index.html     # интерфейс
-    ├── app.js         # модель расчёта и логика
-    └── style.css      # стили
+├── package.json       # конфигурация для Render
+├── index.html         # интерфейс
+├── app.js             # модель расчёта и логика
+├── style.css          # стили
+├── README.md
+└── .gitignore
 ```
 
 ## Запуск
@@ -75,9 +77,46 @@ steam-revenue-estimator/
 node server.js
 ```
 
-Затем откройте http://localhost:3000
+Затем откройте http://localhost:3001
 
 Порт можно изменить через переменную окружения `PORT`.
+
+## Развёртывание (GitHub Pages + Render)
+
+Приложение состоит из двух частей:
+1. **Статический frontend** (HTML/CSS/JS) — режим 2 (вручную) работает полностью автономно.
+2. **Node-сервер** — нужен для режима 1 (загрузка данных Steam по ссылке), т.к. Steam API не разрешает CORS-запросы из браузера.
+
+Для полноценной работы с режимом 1 нужно развернуть сервер.
+
+### 1. Сервер на Render (бесплатный тир)
+
+1. Создайте аккаунт на [render.com](https://render.com) и подключите GitHub-репозиторий.
+2. Нажмите **New + → Web Service**, выберите репозиторий.
+3. Настройки:
+   - **Build Command**: `npm install` (оставьте по умолчанию)
+   - **Start Command**: `npm start`
+   - Render сам определит Node.js по наличию `package.json`.
+4. Нажмите **Create Web Service** — Render присвоит URL вида `https://steam-revenue-estimator.onrender.com`.
+5. Запомните этот URL.
+
+### 2. GitHub Pages для frontend'а
+
+1. Запушьте репозиторий на GitHub.
+2. В настройках репозитория: **Settings → Pages**, выберите:
+   - **Source**: Deploy from a branch
+   - **Branch**: `master`, **folder**: `/ (root)`
+   - Нажмите **Save**.
+3. После деплоя GitHub даст URL вида `https://<user>.github.io/steam-revenue-estimator/`.
+4. В файле `index.html` замените пустую строку на URL вашего Render-сервера:
+
+```html
+<script>window.STEAM_ESTIMATOR_API = 'https://steam-revenue-estimator.onrender.com';</script>
+```
+
+5. Запушьте изменение.
+
+### 3. Что нажимать на Render
 
 ## API
 

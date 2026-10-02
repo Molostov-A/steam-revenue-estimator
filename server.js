@@ -4,7 +4,7 @@ const path = require('path');
 const { URL } = require('url');
 
 const ROOT = __dirname;
-const PUBLIC_DIR = path.join(ROOT, 'public');
+const PUBLIC_DIR = ROOT;
 const PORT = process.env.PORT || 3001;
 
 const MIME = {
@@ -19,7 +19,12 @@ const MIME = {
 
 function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  });
   res.end(body);
 }
 
@@ -113,6 +118,15 @@ const server = http.createServer(async (req, res) => {
   const reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(reqUrl.pathname);
 
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Max-Age': '86400',
+    });
+    return res.end();
+  }
+
   if (req.method === 'GET' && pathname === '/api/app') {
     return handleApp(req, res, reqUrl.searchParams);
   }
@@ -133,7 +147,10 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 404, { ok: false, error: 'Not found' });
     }
     const ext = path.extname(fullPath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Access-Control-Allow-Origin': '*',
+    });
     res.end(data);
   });
 });
