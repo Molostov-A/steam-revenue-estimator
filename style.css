@@ -170,7 +170,6 @@ label input:disabled {
 
 .card-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 .card-value { font-size: 24px; font-weight: 700; }
-.card-value.money::before { content: '$'; font-size: 18px; font-weight: 500; margin-right: 2px; }
 .card-sub { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
 
 .disclaimer {

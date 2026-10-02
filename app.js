@@ -178,9 +178,8 @@ function render(result) {
       const s = scenarios[key];
       const valEl = $(valueId);
       const subEl = $(subId);
-      valEl.classList.remove('money');
-      if (showNet) { valEl.textContent = money(s.devRevenue); valEl.classList.add('money'); }
-      else if (showGross) { valEl.textContent = money(s.gross); valEl.classList.add('money'); }
+      if (showNet) valEl.textContent = money(s.devRevenue);
+      else if (showGross) valEl.textContent = money(s.gross);
       else valEl.textContent = '—';
 
       const parts = [];
