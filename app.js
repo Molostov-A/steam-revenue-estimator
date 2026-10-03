@@ -16,7 +16,7 @@ function round1(n) { return Math.round(n * 10) / 10; }
 
 function money(v) {
   if (v == null || !Number.isFinite(v)) return '—';
-  return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  return '$' + Math.round(v).toLocaleString('ru-RU');
 }
 
 function compact(v) {
@@ -29,7 +29,7 @@ function compact(v) {
 
 function fmtInt(v) {
   if (v == null || !Number.isFinite(v)) return '—';
-  return Math.round(v).toLocaleString('en-US');
+  return Math.round(v).toLocaleString('ru-RU');
 }
 
 // ---------- tax presets ----------
